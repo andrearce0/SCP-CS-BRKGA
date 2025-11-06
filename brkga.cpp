@@ -66,7 +66,9 @@ void aplicar_fitness_paralela(vector<Cromossomo>& populacao, int indice_inicio_n
                 std::launch::async, //força a execução em um novo thread
                 decodificar,        //a funcao a ser chamada no thread
                 populacao[i].genes,   //genes é copiado
-                std::cref(instancia)) //instancia é passada por referência constante
+                std::cref(instancia), //instancia é passada por referência constante
+                nullptr
+            )
         );
     }
     //o programa principal espera cada thread terminar
@@ -141,14 +143,14 @@ double brkga(SCPCSInstance& instancia, int tamanho_elite, int tamanho_populacao,
     double melhor_fitness_bruto = populacao[0].fitness;
     cout << "Melhor solucao (Antes da Busca Local): " << melhor_fitness_bruto << std::endl;
     
-    //obter o conjunto da melhor solucao encontrada
-    std::set<int> melhor_solucao_bruta = decodificar_para_solucao(populacao[0].genes, instancia);
+    //solucao_refinada é criado para receber o conjunto solucao final
+    std::set<int> solucao_refinada;
+    decodificar(populacao[0].genes, instancia, &solucao_refinada);
 
-    //aplica a Busca Local (que atualiza o custo por referencia)
-    double custo_refinado = melhor_fitness_bruto; //passa o custo bruto como ponto de partida
-    std::set<int> solucao_refinada = busca_local_remocao(melhor_solucao_bruta, instancia, custo_refinado);
+    double custo_final = melhor_fitness_bruto;
+    solucao_refinada = busca_local_remocao(solucao_refinada, instancia, custo_final);
 
-    cout << "Melhor solucao (Pos Busca Local): " << custo_refinado << std::endl;
+    cout << "Melhor solucao (Pos Busca Local): " << custo_final << std::endl;
 
     //contagem tempo
     auto end = std::chrono::steady_clock::now();
@@ -157,12 +159,12 @@ double brkga(SCPCSInstance& instancia, int tamanho_elite, int tamanho_populacao,
             << elapsed/std::chrono::seconds(1)
             << " s" << std::endl;
 
-    cout << "Melhor conjunto encontrado e composto pelos subconjuntos: " << endl;
+    cout << "Melhor solucao encontrada é composta pelos subconjuntos: " << endl;
     for(auto elemento : solucao_refinada)
         cout << elemento + 1 << " ";
     cout << endl << endl;
 
-    return custo_refinado; //custo refinado pela busca local
+    return custo_final; //custo refinado pela busca local
 }
 
 int main(){
@@ -170,10 +172,10 @@ int main(){
 
     vector<Cromossomo> populacao;
 
-    string nome_arquivo = "instancias//scpcyc08-3.txt"; //nome do arquivo que contem a instancia
+    string nome_arquivo = "instancias//scpclr10-3.txt"; //nome do arquivo que contem a instancia
     int k_threshold = 1; //valor k (tolerancia de elementos em comum)
-    int tamanho_populacao = 128; //numero de individuos da populacao
-    int tamanho_elite = 24; //numero de individuos da elite
+    int tamanho_populacao = 140; //numero de individuos da populacao
+    int tamanho_elite = 28; //numero de individuos da elite
     int num_testes = 5; //numero de vezes que a instancia sera executada com a configuracao determinada
     int num_geracoes = 500; //numero de geracoes que cada execução terá
     float percentual_mutantes = 0.2; //percentual de mutantes na populacao
